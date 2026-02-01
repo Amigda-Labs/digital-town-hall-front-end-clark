@@ -1,55 +1,53 @@
 'use client';
 
-import { useState } from 'react';
+import { ChatKit, useChatKit } from '@openai/chatkit-react';
 import Link from 'next/link';
-
-// Placeholder messages for demo purposes
-const demoMessages = [
-  {
-    role: 'assistant',
-    content: "Hello! I'm your Clark Pampanga AI Assistant. I can help you with information about destinations, events, activities, business opportunities, and more. How can I assist you today?",
-  },
-];
-
-const suggestedQuestions = [
-  "What are the top tourist attractions in Clark?",
-  "How do I get to Mt. Pinatubo from Clark?",
-  "What events are happening this month?",
-  "Tell me about business investment opportunities",
-  "Where can I find the best Kapampangan food?",
-  "What hotels do you recommend in Clark?",
-];
+import { useState } from 'react';
 
 export default function AskAgentPage() {
-  const [messages, setMessages] = useState(demoMessages);
-  const [inputValue, setInputValue] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSendMessage = async (message: string) => {
-    if (!message.trim()) return;
+  // Initialize ChatKit with your backend
+  const { control } = useChatKit({
+    api: {
+      async getClientSecret(existingSecret) {
+        try {
+          // If we already have a valid secret, try to refresh
+          // Otherwise, get a new one
+          const res = await fetch('/api/chatkit/session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              // You can add a deviceId here for user tracking
+              deviceId: localStorage.getItem('chatkit_device_id') || undefined,
+            }),
+          });
 
-    // Add user message
-    const userMessage = { role: 'user', content: message };
-    setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
-    setIsTyping(true);
+          if (!res.ok) {
+            throw new Error('Failed to create session');
+          }
 
-    // Simulate AI response (placeholder - will be replaced with actual OpenAI integration)
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const aiResponse = {
-      role: 'assistant',
-      content: "Thank you for your question! This is a placeholder response. Once the OpenAI Agents SDK integration is complete, I'll be able to provide detailed, accurate information about Clark Pampanga and help you with your inquiries in real-time.",
-    };
-    
-    setMessages(prev => [...prev, aiResponse]);
-    setIsTyping(false);
-  };
+          const data = await res.json();
+          
+          // Store device ID for future sessions
+          if (!localStorage.getItem('chatkit_device_id')) {
+            localStorage.setItem('chatkit_device_id', `user_${Date.now()}`);
+          }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSendMessage(inputValue);
-  };
+          setIsLoading(false);
+          return data.client_secret;
+        } catch (err) {
+          console.error('ChatKit session error:', err);
+          setError('Unable to connect to AI assistant. Please try again later.');
+          setIsLoading(false);
+          throw err;
+        }
+      },
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDFCFA] to-[#F0F7F1]">
@@ -78,110 +76,38 @@ export default function AskAgentPage() {
 
       {/* Chat Interface */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Coming Soon Banner */}
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
-          <svg className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div>
-            <p className="font-semibold text-amber-800">AI Agent Coming Soon</p>
-            <p className="text-sm text-amber-700">
-              Our full AI-powered assistant is currently being integrated. This is a preview of the chat interface.
-              For immediate assistance, please <Link href="/contact" className="underline font-medium">contact us directly</Link>.
-            </p>
+        {/* Error State */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3">
+            <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="font-semibold text-red-800">Connection Error</p>
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Chat Container */}
+        {/* ChatKit Container */}
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
-          {/* Chat Messages */}
-          <div className="h-[400px] md:h-[500px] overflow-y-auto p-6 space-y-6">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-2xl px-5 py-3 ${
-                    message.role === 'user'
-                      ? 'bg-gradient-to-br from-[#2D5A3D] to-[#4A7C59] text-white'
-                      : 'bg-[#F0F7F1] text-[#2C3E2D]'
-                  }`}
-                >
-                  {message.role === 'assistant' && (
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-6 h-6 bg-[#2D5A3D] rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                      </div>
-                      <span className="text-xs font-semibold text-[#2D5A3D]">Clark AI Assistant</span>
-                    </div>
-                  )}
-                  <p className="text-sm leading-relaxed">{message.content}</p>
-                </div>
+          {/* Loading State */}
+          {isLoading && (
+            <div className="h-[500px] md:h-[600px] flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-[#2D5A3D] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-[#5A6B5C]">Connecting to AI Assistant...</p>
               </div>
-            ))}
-            
-            {/* Typing Indicator */}
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="bg-[#F0F7F1] rounded-2xl px-5 py-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-[#2D5A3D] rounded-full flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    </div>
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-[#2D5A3D] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                      <span className="w-2 h-2 bg-[#2D5A3D] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                      <span className="w-2 h-2 bg-[#2D5A3D] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Suggested Questions */}
-          <div className="px-6 py-4 bg-[#FDFCFA] border-t border-gray-100">
-            <p className="text-xs text-[#5A6B5C] mb-3 font-medium">Suggested questions:</p>
-            <div className="flex flex-wrap gap-2">
-              {suggestedQuestions.slice(0, 3).map((question, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleSendMessage(question)}
-                  className="text-xs px-3 py-1.5 bg-white border border-[#2D5A3D]/20 text-[#2D5A3D] rounded-full hover:bg-[#2D5A3D] hover:text-white transition-colors"
-                >
-                  {question}
-                </button>
-              ))}
             </div>
-          </div>
-
-          {/* Input Area */}
-          <form onSubmit={handleSubmit} className="p-4 border-t border-gray-100 bg-white">
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Type your question here..."
-                className="flex-1 px-5 py-3 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#2D5A3D] focus:border-transparent transition-all"
-              />
-              <button
-                type="submit"
-                disabled={!inputValue.trim() || isTyping}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <span className="hidden sm:inline">Send</span>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </button>
-            </div>
-          </form>
+          )}
+          
+          {/* ChatKit Widget */}
+          {!isLoading && !error && (
+            <ChatKit
+              control={control}
+              className="h-[500px] md:h-[600px] w-full"
+            />
+          )}
         </div>
 
         {/* Features */}
