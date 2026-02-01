@@ -32,7 +32,7 @@ ChatKit requires your website to be deployed and whitelisted in OpenAI. **Do NOT
 
 ---
 
-## Step 1: Deploy Your Website to Vercel (Without ChatKit First)
+## Step 1: Deploy Your Website to Vercel (Without ChatKit First) [Recommended]
 
 Before adding ChatKit, you need to deploy your website to Vercel so you can get your domain and add it to OpenAI's allowlist.
 
@@ -98,16 +98,69 @@ If you want to test ChatKit locally before deploying:
 
 ---
 
-## Step 3: Create a Development Branch (IMPORTANT!)
+## Step 3: Understanding Vercel Deployment Environments
+
+**Important Information About Vercel Environments:**
+
+Before we proceed, let's clarify how Vercel handles different deployment environments. This will help you decide the best approach for your project.
+
+### Vercel's Default Environments (FREE - No Domain Purchase Required)
+
+Vercel provides three environments by default on all plans:
+
+1. **Production Environment** - Your main branch (usually `main`) deploys here with your primary domain
+2. **Preview Environment** - **Every branch and pull request automatically gets a preview URL** (e.g., `your-project-git-dev-username.vercel.app`)
+3. **Local Development** - Your local machine with `npm run dev`
+
+**Key Point:** You do NOT need to buy a domain to use preview branches! Vercel automatically creates preview deployments for every branch you push.
+
+### Custom Environments (Optional - Pro/Enterprise Plans)
+
+If you want more control (like a persistent `staging` environment with its own domain), Vercel offers **Custom Environments** on paid plans:
+- **Pro Plan**: 1 custom environment per project
+- **Enterprise Plan**: 12 custom environments per project
+
+**Learn more:**
+- [Vercel Environments Documentation](https://vercel.com/docs/deployments/environments)
+- [Managing Deployments](https://vercel.com/docs/deployments/managing-deployments)
+- [Video: Environments on Vercel](https://www.youtube.com/watch?v=nZrAgov_-D8) (older but still relevant)
+
+### Our Approach for This Guide
+
+**For now, we'll deploy directly to the `main` branch** to keep things simple. However, we'll document the preview branch option below so you can use it in the future if needed.
+
+---
+
+## Step 3 (Option A): Deploy Directly to Main (Recommended for Beginners)
+
+**This is the simplest approach** - all changes go directly to your production site.
+
+**Pros:**
+- Simple workflow
+- No branch management needed
+- Immediate production deployment
+
+**Cons:**
+- Changes go live immediately
+- No separate testing environment
+
+**If you choose this option, skip to [Step 4](#step-4-understand-your-project-structure)**
+
+---
+
+## Step 3 (Option B): Use a Development Branch for Testing (Advanced)
+
+**Use this approach if you want to test changes before going live.**
 
 **Why use a separate branch?**
 
-We don't want to break your working website! By creating a `dev` branch, you can:
-- Test the ChatKit integration safely
+By creating a `dev` branch, you can:
+- Test the ChatKit integration safely on a preview URL
 - Keep your `main` branch working (as a backup)
 - Only merge to `main` when you've confirmed everything works
+- Vercel will automatically create a preview deployment at `your-project-git-dev-username.vercel.app`
 
-### 3.1 Create the `dev` Branch
+### 3B.1 Create the `dev` Branch
 
 Open your terminal, navigate to your project folder, and run these commands:
 
@@ -129,7 +182,7 @@ git push -u origin dev
 3. `git checkout -b dev` - Creates a new branch called "dev" and switches to it
 4. `git push -u origin dev` - Uploads this new branch to GitHub
 
-### 3.2 Verify You're on the Dev Branch
+### 3B.2 Verify You're on the Dev Branch
 
 Run this command to check:
 
@@ -142,6 +195,17 @@ You should see:
   main
 * dev    ← The asterisk (*) shows you're on the dev branch
 ```
+
+### 3B.3 Vercel Preview Deployment
+
+Once you push the `dev` branch, Vercel will automatically:
+- Create a preview deployment at a URL like: `your-project-git-dev-username.vercel.app`
+- Add a comment to your GitHub commits/PRs with the preview URL
+- Keep your main production site unchanged
+
+**Important:** You'll need to add BOTH your production domain AND your preview domain to OpenAI's allowlist:
+- Production: `your-project.vercel.app`
+- Preview: `your-project-git-dev-username.vercel.app` (or use wildcard: `*.vercel.app`)
 
 **From now on, all your ChatKit changes will be on the `dev` branch, keeping `main` safe!**
 
@@ -617,34 +681,55 @@ git commit -m "Add ChatKit integration"
 
 ---
 
-## Step 12: Configure Vercel to Deploy from Dev Branch
+## Step 12: Configure Vercel Deployment (Choose Your Approach)
 
-Now we tell Vercel to deploy from your `dev` branch so you can test the integration safely.
+How you configure Vercel depends on which approach you chose in Step 3:
 
-### 12.1 Go to Vercel Project Settings
+### Option A: Deploying Directly to Main (Simple)
+
+**If you're deploying directly to `main`, you don't need to change anything!** Vercel is already configured to deploy from `main` by default.
+
+**Skip to [Step 13](#step-13-add-environment-variable-to-vercel)**
+
+---
+
+### Option B: Using Dev Branch with Preview Deployments (Advanced)
+
+**If you created a `dev` branch and want to test on a preview URL first:**
+
+Vercel automatically creates preview deployments for all branches, so you have two options:
+
+#### Option B1: Use Automatic Preview Deployments (Recommended)
+
+**No configuration needed!** When you push to `dev`, Vercel will:
+- Automatically create a preview deployment
+- Give you a URL like: `your-project-git-dev-username.vercel.app`
+- Keep your production site (from `main` branch) unchanged
+
+**This is the recommended approach** - you get separate environments without changing any settings.
+
+**Continue to [Step 13](#step-13-add-environment-variable-to-vercel)**
+
+#### Option B2: Make Dev Branch Your Production Branch (Not Recommended)
+
+**Only use this if you want `dev` to be your main production site temporarily.**
 
 1. Go to [vercel.com](https://vercel.com) and log in
 2. Click on your project
 3. Click **"Settings"** (in the top navigation)
 4. Click **"Git"** in the left sidebar (under "Project Settings")
+5. Scroll down to find the **"Production Branch"** section
+6. Change from `main` to `dev`
+7. Click **"Save"**
 
-### 12.2 Change the Production Branch
-
-1. Scroll down to find the **"Production Branch"** section
-2. You'll see a dropdown that probably says `main`
-3. Click the dropdown and select **"Custom"**
-4. Type `dev` in the text field
-5. Click **"Save"**
-
-![Vercel Production Branch Setting](https://assets.vercel.com/image/upload/contentful/image/e5382hct74si/aVQTP69PLcO5Fa39gmbsR/1f61f859e59405124cf7395f42499b66/project-setting.png)
-
-### 12.3 What This Means
-
+**What This Means:**
 - **Before:** Pushing to `main` → Production deployment
 - **Now:** Pushing to `dev` → Production deployment
-- Your `main` branch is now "safe" - it won't auto-deploy anymore
+- Your `main` branch won't auto-deploy anymore
 
-**Important:** After you finish testing and want to go live, you'll change this back to `main` (we'll cover this later).
+**Important:** After testing, you'll need to change this back to `main` and merge your changes.
+
+**Learn more:** [Manually Promoting Deployments](https://vercel.com/docs/deployments/managing-deployments#manually-promoting-to-production)
 
 ---
 
@@ -728,11 +813,25 @@ See the [Troubleshooting](#troubleshooting) section below for more help.
 
 ---
 
-## Step 16: Merge to Main (After Testing Successfully!)
+## Step 16: Going Live with Your Changes
 
-Once you've confirmed that ChatKit works perfectly on your `dev` branch, it's time to merge to `main` and make it live for everyone.
+How you go live depends on which approach you chose:
 
-### 16.1 Merge Dev into Main
+### Option A: Already Live! (If You Deployed Directly to Main)
+
+**If you deployed directly to `main`, you're already live!** Your ChatKit integration is already on your production site.
+
+**Congratulations! Your ChatKit integration is complete!**
+
+Skip to the [Troubleshooting](#troubleshooting) section if you encounter any issues.
+
+---
+
+### Option B: Merge to Main (If You Used a Dev Branch)
+
+Once you've confirmed that ChatKit works perfectly on your `dev` branch preview deployment, it's time to merge to `main` and make it live for everyone.
+
+#### 16B.1 Merge Dev into Main
 
 In your terminal:
 
@@ -750,9 +849,11 @@ git merge dev
 git push origin main
 ```
 
-### 16.2 Change Vercel Back to Main Branch
+#### 16B.2 Update Vercel Production Branch (Only if You Changed It)
 
-Now that your code is merged, change Vercel to deploy from `main` again:
+**Only do this if you changed the production branch to `dev` in Step 12 (Option B2).**
+
+If you used automatic preview deployments (Option B1), skip this step.
 
 1. Go to [vercel.com](https://vercel.com) and log in
 2. Click on your project
@@ -761,13 +862,14 @@ Now that your code is merged, change Vercel to deploy from `main` again:
 5. Change it from `dev` back to `main`
 6. Click **"Save"**
 
-### 16.3 Trigger a New Deployment
+#### 16B.3 Verify Deployment
 
-Vercel should automatically redeploy, but if not:
+Vercel should automatically redeploy from `main`. To verify:
 
 1. Go to your project's **"Deployments"** tab
-2. Find the latest deployment for `main`
-3. Click the three dots (...) → **"Redeploy"**
+2. Look for the latest deployment from the `main` branch
+3. Once it's complete, visit your production URL: `your-project.vercel.app`
+4. Test the ChatKit integration on the live site
 
 **Congratulations! Your ChatKit integration is now live on your main production website!**
 
@@ -858,6 +960,29 @@ Want the chat to appear as a floating button on every page? Here's how:
 
 ## Quick Reference
 
+### Option A: Direct to Main (Simple)
+
+| Step | What | Where |
+|------|------|-------|
+| 1 | Deploy to Vercel first (test without ChatKit) | [vercel.com](https://vercel.com) |
+| 2 | Add domain to OpenAI | OpenAI Platform → Settings → Security → Domain Allowlist |
+| 3 | Skip branch creation | Work directly on `main` |
+| 4 | Understand project structure | Review folder layout |
+| 5 | Install package | `npm install @openai/chatkit-react` |
+| 6 | API Key (local) | Create `.env.local` file |
+| 7 | Backend endpoint | Create `src/app/api/chatkit/session/route.ts` |
+| 8 | ChatKit script | Update `src/app/layout.tsx` |
+| 9 | Chat page | Update `src/app/ask-agent/page.tsx` |
+| 10 | Test locally | `npm run dev` (expect errors, check structure) |
+| 11 | Commit changes | `git add . && git commit -m "Add ChatKit"` |
+| 12 | Skip Vercel config | Already set to `main` |
+| 13 | API Key (Vercel) | Vercel → Settings → Environment Variables |
+| 14 | Deploy to Vercel | `git push origin main` |
+| 15 | Test on Vercel | Visit your `.vercel.app/ask-agent` URL |
+| 16 | Done! | Already live |
+
+### Option B: Using Dev Branch (Advanced)
+
 | Step | What | Where |
 |------|------|-------|
 | 1 | Deploy to Vercel first (test without ChatKit) | [vercel.com](https://vercel.com) |
@@ -871,23 +996,30 @@ Want the chat to appear as a floating button on every page? Here's how:
 | 9 | Chat page | Update `src/app/ask-agent/page.tsx` |
 | 10 | Test locally | `npm run dev` (expect errors, check structure) |
 | 11 | Commit changes | `git add . && git commit -m "Add ChatKit"` |
-| 12 | Configure Vercel branch | Vercel → Settings → Git → Production Branch → `dev` |
+| 12 | Vercel config (optional) | Use auto-preview or change production branch |
 | 13 | API Key (Vercel) | Vercel → Settings → Environment Variables |
 | 14 | Deploy to Vercel | `git push origin dev` |
-| 15 | Test on Vercel | Visit your `.vercel.app/ask-agent` URL |
+| 15 | Test on preview URL | Visit `your-project-git-dev-username.vercel.app/ask-agent` |
 | 16 | Merge to main | `git checkout main && git merge dev && git push` |
-| 17 | Change Vercel to main | Vercel → Settings → Git → Production Branch → `main` |
+| 17 | Verify production | Check `your-project.vercel.app` |
 
 **Workflow ID:** `wf_691b576d09708190bb2a95e9568bce680b5b0785153c4a49`
+
+**Important Links:**
+- [Vercel Environments](https://vercel.com/docs/deployments/environments) - Learn about preview, production, and custom environments
+- [Managing Deployments](https://vercel.com/docs/deployments/managing-deployments) - Control your deployments
+- [Manually Promoting Deployments](https://vercel.com/docs/deployments/managing-deployments#manually-promoting-to-production) - Advanced deployment control
 
 ---
 
 ## Summary Checklist
 
 ### Phase 1: Before Starting
-- [ ] Website deployed to Vercel (without ChatKit, on `main` branch)
+- [ ] Website deployed to Vercel (without ChatKit)
 - [ ] Vercel domain added to OpenAI's Domain Allowlist
-- [ ] Created `dev` branch from `main`
+- [ ] Decided on deployment approach (direct to `main` or use `dev` branch)
+- [ ] If using dev branch: Created `dev` branch from `main`
+- [ ] If using dev branch: Added preview domain to OpenAI allowlist (or use `*.vercel.app`)
 
 ### Phase 2: Add ChatKit Code
 - [ ] Installed `@openai/chatkit-react` package
@@ -899,19 +1031,72 @@ Want the chat to appear as a floating button on every page? Here's how:
 ### Phase 3: Test Locally
 - [ ] Ran `npm run dev` and checked for build errors
 - [ ] Verified page structure looks correct
-- [ ] Committed changes to `dev` branch
+- [ ] Committed changes to your working branch
 
 ### Phase 4: Deploy & Test
-- [ ] Changed Vercel production branch to `dev`
 - [ ] Added `OPENAI_API_KEY` to Vercel environment variables
-- [ ] Pushed to `dev` branch
-- [ ] Tested ChatKit on Vercel deployment
+- [ ] Pushed changes to GitHub
+- [ ] Vercel deployed automatically
+- [ ] Tested ChatKit on deployed URL
 - [ ] ChatKit working correctly
 
-### Phase 5: Go Live
-- [ ] Merged `dev` into `main`
-- [ ] Changed Vercel production branch back to `main`
-- [ ] Final deployment successful
+### Phase 5: Go Live (If Using Dev Branch)
+- [ ] Merged `dev` into `main` (if applicable)
+- [ ] Verified production deployment
+- [ ] Final testing on production URL successful
+
+### Phase 6: Optional - Custom Environments (Pro/Enterprise)
+- [ ] Created custom environment (e.g., `staging`) if needed
+- [ ] Configured custom domain for environment
+- [ ] Set up branch tracking
+- [ ] Configured environment-specific variables
+
+---
+
+## Advanced: Setting Up Custom Environments (Pro/Enterprise)
+
+If you're on a Vercel Pro or Enterprise plan and want to set up a dedicated staging environment with its own domain, here's how:
+
+### What Are Custom Environments?
+
+Custom environments let you create persistent, named environments (like `staging`, `QA`, `demo`) with:
+- Their own domain names
+- Separate environment variables
+- Branch tracking for automatic deployments
+
+**Pricing:**
+- **Pro Plan**: 1 custom environment per project
+- **Enterprise Plan**: 12 custom environments per project
+
+### Creating a Custom Environment
+
+1. Go to your **Project Settings** in the Vercel Dashboard
+2. Under **Environments**, click **Create Environment**
+3. Provide a name (e.g., `staging`)
+4. Optionally:
+   - Enable **Branch Tracking** to auto-deploy from a specific branch
+   - **Attach a Domain** for a persistent URL (requires domain ownership)
+   - **Import variables** from another environment
+
+### Deploying to Custom Environments
+
+```bash
+# Deploy to your custom "staging" environment
+vercel deploy --target=staging
+
+# Pull environment variables from staging
+vercel pull --environment=staging
+
+# Add environment variables to staging
+vercel env add MY_KEY staging
+```
+
+### Learn More
+
+- [Vercel Environments Documentation](https://vercel.com/docs/deployments/environments)
+- [Managing Deployments](https://vercel.com/docs/deployments/managing-deployments)
+- [Manually Promoting Deployments](https://vercel.com/docs/deployments/managing-deployments#manually-promoting-to-production)
+- [Video: Environments on Vercel](https://www.youtube.com/watch?v=nZrAgov_-D8) (older reference but still helpful)
 
 ---
 
@@ -921,6 +1106,8 @@ Want the chat to appear as a floating button on every page? Here's how:
 - **ChatKit GitHub:** https://github.com/openai/chatkit-js
 - **Sample Projects:** https://github.com/openai/openai-chatkit-advanced-samples
 - **Vercel Docs:** https://vercel.com/docs
+- **Vercel Environments:** https://vercel.com/docs/deployments/environments
+- **Vercel CLI Reference:** https://vercel.com/docs/cli
 
 ---
 
