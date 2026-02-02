@@ -21,8 +21,42 @@ Before you start, make sure you have:
 - [ ] Your website code ready and working locally
 - [ ] A GitHub account with your project uploaded
 - [ ] An OpenAI account with API access
-- [ ] Your workflow ID from Agent Builder (you'll add this to `.env.local`)
+- [ ] Your workflow ID from Agent Builder (you'll add this to `.env.local` AND Vercel)
 - [ ] Your OpenAI API secret key (starts with `sk-...`)
+
+---
+
+## Common Mistakes (Read This First!)
+
+These are the most common reasons ChatKit doesn't work. Save yourself time by understanding these upfront:
+
+### Mistake #1: Only Adding Environment Variables to `.env.local`
+
+**Wrong:** "I added `OPENAI_API_KEY` and `WORKFLOW_ID` to `.env.local`, so I'm done!"
+
+**Reality:** `.env.local` only works for **local development**. Vercel deployments need their own environment variables set in the **Vercel Dashboard**.
+
+**Fix:** Always add environment variables to BOTH:
+- `.env.local` (for local `npm run dev`)
+- Vercel Dashboard → Settings → Environment Variables (for deployed sites)
+
+### Mistake #2: Not Adding Preview URLs to OpenAI's Domain Allowlist
+
+**Wrong:** "I added my production domain `my-project.vercel.app` to OpenAI's allowlist. Why doesn't my `dev` branch preview work?"
+
+**Reality:** Each Vercel preview deployment gets a **unique URL** like `my-project-abc123xyz.vercel.app`. This is a DIFFERENT domain from your production domain.
+
+**Fix:** Add EACH preview URL you want to test to OpenAI's Domain Allowlist, OR deploy to production with `npx vercel --prod`.
+
+### Mistake #3: Not Checking the Browser Console
+
+**Wrong:** "ChatKit just shows a loading spinner forever. I don't know what's wrong."
+
+**Reality:** The browser console (F12 → Console) shows exactly what went wrong. Look for error messages like:
+- "Domain verification failed" → Need to add domain to OpenAI allowlist
+- "WORKFLOW_ID is not set" → Need to add env vars to Vercel Dashboard
+
+**Fix:** Always check the browser console first when debugging!
 
 ---
 
@@ -111,13 +145,21 @@ If you prefer using the web interface:
 
 ChatKit will ONLY work on domains that are whitelisted in OpenAI. This is a security feature.
 
-### 2.1 Understanding Your Domain
+> **⚠️ CRITICAL: Domain verification errors are the #1 cause of ChatKit not working!**
+> 
+> If you see "Domain verification failed" in your browser console, it means the domain you're testing on is NOT in OpenAI's allowlist. You must add EVERY domain you want to test on.
 
-From your Vercel deployment, you received:
-- **Production domain:** `your-project.vercel.app` ← Use this one for OpenAI!
-- **Preview/deployment URLs:** `your-project-abc123.vercel.app` ← Don't use these
+### 2.1 Understanding Your Domains
 
-**Why?** The production domain stays the same, while preview URLs change with each deployment.
+From your Vercel deployment, you have multiple URLs:
+
+| URL Type | Example | When to Add to Allowlist |
+|----------|---------|--------------------------|
+| **Production domain** | `your-project.vercel.app` | Always add this |
+| **Preview URLs** | `your-project-abc123.vercel.app` | Add each one you want to test |
+| **localhost** | `localhost` | Add if you want local testing |
+
+**Important:** Each preview deployment gets a UNIQUE URL. If you're testing on a `dev` branch, you'll need to add that specific preview URL to the allowlist.
 
 ### 2.2 Go to OpenAI Platform Settings
 
@@ -126,27 +168,42 @@ From your Vercel deployment, you received:
 3. Click on **Settings** (gear icon, usually top right or in sidebar)
 4. Navigate to **Security** → **Domain Allowlist**
 
-### 2.3 Add Your Vercel Domain
+### 2.3 Add Your Vercel Production Domain
 
 1. Click **"Add Domain"**
 2. Enter your Vercel **production domain**: `your-project.vercel.app`
-   
-   **IMPORTANT:** Use the PROJECT domain, NOT a specific deployment URL!
-   - ✅ Correct: `digital-town-hall-front-end-clark.vercel.app`
-   - ❌ Wrong: `digital-town-hall-front-end-clark-fippi71pw.vercel.app` (deployment-specific)
-   
 3. Click **Save** or **Add**
-4. **OpenAI will provide you with a domain verification key** - this is a security measure
+4. **OpenAI may provide you with a domain key** - for Vercel domains, you can ignore this (see 2.6)
 
-### 2.4 What is the Domain Verification Key?
+### 2.4 Add Preview URLs (If Testing on Dev Branch)
 
-When you add a domain to OpenAI's allowlist, OpenAI may provide you with a **domain key** (verification token). This is used to prove you own the domain.
+> **⚠️ This step is REQUIRED if you're testing on a dev/feature branch!**
 
-**For Vercel domains (*.vercel.app):** You typically don't need to verify ownership since you're using Vercel's infrastructure. OpenAI trusts Vercel domains automatically.
+When you deploy a branch (like `dev`), Vercel creates a unique preview URL like:
+`your-project-abc123xyz.vercel.app`
 
-**For custom domains (like yourdomain.com):** You would need to add the verification key as a DNS TXT record.
+**To find your preview URL:**
+1. Run `npx vercel` in your terminal to deploy
+2. Copy the "Preview" URL from the output
+3. Add this exact URL to OpenAI's Domain Allowlist
 
-**Since you're using a Vercel domain, you can proceed to the next step!**
+**Example workflow:**
+```bash
+# Deploy and get preview URL
+npx vercel
+
+# Output shows:
+# ✅  Preview: https://digital-town-hall-front-end-clark-mcnrs7zyp.vercel.app
+#                    ↑ Add this ENTIRE domain to OpenAI allowlist
+```
+
+**Then in OpenAI Platform:**
+1. Go to Settings → Security → Domain Allowlist
+2. Click "Add Domain"
+3. Enter the preview domain: `digital-town-hall-front-end-clark-mcnrs7zyp.vercel.app`
+4. Click Save
+
+> **Note:** Each time you redeploy, Vercel may generate a new preview URL. You'll need to add each new URL to the allowlist, or use `npx vercel --prod` to deploy to your production domain which is already allowlisted.
 
 ### 2.5 (Optional) Add localhost for local testing
 
@@ -380,7 +437,13 @@ This installs the ChatKit React components that you'll use in your chat page.
 
 Never put API keys directly in your code! Instead, we use environment variables.
 
-### 6.1 Create the Environment File
+> **⚠️ CRITICAL: `.env.local` is ONLY for local development!**
+> 
+> The `.env.local` file does NOT get deployed to Vercel. You MUST also add these environment variables to Vercel Dashboard (Step 13) for your deployed site to work.
+> 
+> **Common mistake:** Developers add keys to `.env.local` and wonder why their Vercel deployment shows "WORKFLOW_ID environment variable is not set". This is because Vercel doesn't read `.env.local` - it uses its own environment variables.
+
+### 6.1 Create the Environment File (For Local Development)
 
 **Create a file called `.env.local` in your project root** (same level as `package.json`):
 
@@ -408,6 +471,7 @@ Check your `.gitignore` file - it should already have `.env.local` listed. If no
 **Important:**
 - Never share this key with anyone!
 - Never commit this file to GitHub!
+- **Remember:** You'll need to add these same variables to Vercel Dashboard in Step 13!
 
 ---
 
@@ -864,28 +928,34 @@ Vercel automatically creates preview deployments for all branches, so you have t
 
 ---
 
-## Step 13: Add Environment Variable to Vercel
+## Step 13: Add Environment Variables to Vercel (REQUIRED!)
 
-Your local `.env.local` file won't work on Vercel - you need to add the secret there too.
+> **⚠️ THIS STEP IS MANDATORY!**
+> 
+> Your local `.env.local` file does NOT get deployed to Vercel. Without this step, your deployed site will show errors like:
+> - "WORKFLOW_ID environment variable is not set"
+> - "OPENAI_API_KEY environment variable is not set"
+> - "Unable to connect to AI assistant"
 
 ### 13.1 Go to Vercel Dashboard
 
-1. Still in your project on Vercel
-2. Go to **Settings** → **Environment Variables** (in the left sidebar)
+1. Go to [vercel.com](https://vercel.com) and log in
+2. Click on your project
+3. Go to **Settings** → **Environment Variables** (in the left sidebar)
 
 ### 13.2 Add the Environment Variables
 
-You need to add both your API key and workflow ID:
+You need to add **BOTH** your API key and workflow ID:
 
 **First, add your API Key:**
-1. Click **"Add New"**
+1. Click **"Add New"** (or "Add Another")
 2. Enter:
    - **Key:** `OPENAI_API_KEY`
    - **Value:** `sk-your-actual-api-key-here` (your real API key)
-3. Select which environments it applies to:
-   - ✅ Check **Production**
-   - ✅ Check **Preview**
-   - ✅ Check **Development**
+3. **IMPORTANT:** Select which environments it applies to:
+   - ✅ Check **Production** (for your main site)
+   - ✅ Check **Preview** (for branch deployments like `dev`)
+   - ✅ Check **Development** (for `vercel dev` local testing)
 4. Click **Save**
 
 **Then, add your Workflow ID:**
@@ -893,11 +963,33 @@ You need to add both your API key and workflow ID:
 2. Enter:
    - **Key:** `WORKFLOW_ID`
    - **Value:** `wf-your-workflow-id-here` (your workflow ID from Agent Builder)
-3. Select which environments it applies to:
+3. **IMPORTANT:** Select which environments it applies to:
    - ✅ Check **Production**
    - ✅ Check **Preview**
    - ✅ Check **Development**
 4. Click **Save**
+
+### 13.3 Verify Your Environment Variables
+
+After adding both variables, your Environment Variables page should show:
+
+| Key | Value | Environments |
+|-----|-------|--------------|
+| `OPENAI_API_KEY` | sk-proj-... (encrypted) | Production, Preview, Development |
+| `WORKFLOW_ID` | wf_... (encrypted) | Production, Preview, Development |
+
+> **⚠️ If you only check "Production":** Your preview deployments (dev branch) will NOT have access to these variables and will fail!
+
+### 13.4 Redeploy After Adding Variables
+
+Environment variables are only picked up during deployment. After adding them:
+
+```bash
+# Redeploy to pick up the new environment variables
+npx vercel
+```
+
+Or trigger a redeploy from the Vercel Dashboard.
 
 ---
 
@@ -1022,22 +1114,106 @@ Vercel should automatically redeploy from `main`. To verify:
 
 ## Troubleshooting
 
-### "Failed to create session" error
+### How to Debug ChatKit Issues
 
-**Check these things:**
-1. Is your domain added to OpenAI's Domain Allowlist?
-2. Is your API key correct in Vercel's environment variables?
-3. Is your `WORKFLOW_ID` environment variable set correctly in Vercel?
-4. Are both `OPENAI_API_KEY` and `WORKFLOW_ID` added to your `.env.local` file locally?
+**Always start by checking the browser console:**
 
-### ChatKit not loading
+1. Open your deployed site in the browser
+2. Press **F12** (or right-click → "Inspect")
+3. Click the **Console** tab
+4. Look for error messages (red text)
+
+Common error messages and their solutions are listed below.
+
+---
+
+### "Domain verification failed" Error
+
+**Error message in console:**
+```
+IntegrationError: Domain verification failed for https://your-project-abc123.vercel.app. 
+Please register your domain at https://platform.openai.com/settings/organization/security/domain-allowlist.
+```
+
+**Cause:** The domain you're testing on is NOT in OpenAI's Domain Allowlist.
+
+**Solution:**
+1. Copy the exact domain from the error message
+2. Go to [platform.openai.com](https://platform.openai.com) → Settings → Security → Domain Allowlist
+3. Click "Add Domain"
+4. Paste the domain (e.g., `your-project-abc123.vercel.app`)
+5. Click Save
+6. Refresh your page
+
+> **Note:** Each preview deployment has a unique URL. You need to add each one you want to test on, OR deploy to production (`npx vercel --prod`) which uses your already-allowlisted production domain.
+
+---
+
+### "WORKFLOW_ID environment variable is not set" Error
+
+**Error message:** Chat shows "Connection Error" and server logs show:
+```
+[ChatKit] WORKFLOW_ID is not set
+```
+
+**Cause:** Environment variables are missing from Vercel Dashboard.
+
+**Solution:**
+1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
+2. Add `WORKFLOW_ID` with your workflow ID value
+3. Make sure **Preview** is checked (not just Production!)
+4. Click Save
+5. Redeploy: `npx vercel`
+
+> **Remember:** `.env.local` only works locally. Vercel needs its own environment variables!
+
+---
+
+### "OPENAI_API_KEY environment variable is not set" Error
+
+**Same solution as above** - add `OPENAI_API_KEY` to Vercel Dashboard with all environments checked.
+
+---
+
+### "Failed to create session" Error
+
+**Check these things in order:**
+1. **Domain allowlisted?** Check browser console for "Domain verification failed"
+2. **Environment variables set in Vercel?** Both `OPENAI_API_KEY` and `WORKFLOW_ID`
+3. **Correct values?** Double-check the API key and workflow ID are correct
+4. **API key valid?** Check your OpenAI account has API access and credits
+
+---
+
+### ChatKit Shows Briefly Then Disappears
+
+**Cause:** The session request failed after the widget mounted.
+
+**How to debug:**
+1. Open browser console (F12 → Console)
+2. Reload the page
+3. Look for `[ChatKit]` log messages:
+   - `[ChatKit] Requesting client secret` - Good, request started
+   - `[ChatKit] Client secret received` - Good, session created
+   - `[ChatKit] Session request failed` - Check server logs
+
+4. Check the Network tab:
+   - Find `POST /api/chatkit/session`
+   - Click on it and check the Response
+   - Look for error messages
+
+---
+
+### ChatKit Not Loading At All
 
 **Check these things:**
 1. Open browser console (F12 → Console tab) - any red errors?
 2. Is the ChatKit script loaded? Check Network tab for `chatkit.js`
 3. Did you install `@openai/chatkit-react`? Check `package.json`
 
-### "Module not found" errors
+---
+
+### "Module not found" Errors
 
 **Run these commands locally:**
 ```bash
@@ -1048,20 +1224,19 @@ npm install
 
 Then commit, push, and redeploy.
 
-### Domain not working
+---
 
-Make sure you added the **project domain**, not a deployment URL:
-- ✅ Correct: `my-town-hall.vercel.app`
-- ❌ Wrong: `my-town-hall-git-main-username.vercel.app`
-
-### Deployment not updating
+### Deployment Not Updating
 
 If Vercel isn't picking up your changes:
 1. Check you pushed to the correct branch (`dev` or `main`)
 2. Check the Production Branch setting in Vercel matches
 3. Try triggering a manual redeploy from the Vercel dashboard
+4. After adding environment variables, you MUST redeploy
 
-### Local testing not working
+---
+
+### Local Testing Not Working
 
 This is expected! ChatKit needs:
 - A whitelisted domain (add `localhost` to OpenAI allowlist if you want local testing)
@@ -1115,14 +1290,14 @@ Want the chat to appear as a floating button on every page? Here's how:
 | 3 | Skip branch creation | Work directly on `main` |
 | 4 | Understand project structure | Review folder layout |
 | 5 | Install package | `npm install @openai/chatkit-react` |
-| 6 | Environment variables (local) | Create `.env.local` file with `OPENAI_API_KEY` and `WORKFLOW_ID` |
+| 6 | Environment variables (LOCAL) | Create `.env.local` file with `OPENAI_API_KEY` and `WORKFLOW_ID` |
 | 7 | Backend endpoint | Create `src/app/api/chatkit/session/route.ts` |
 | 8 | ChatKit script | Update `src/app/layout.tsx` |
 | 9 | Chat page | Update `src/app/ask-agent/page.tsx` |
 | 10 | Test locally | `npm run dev` (expect errors, check structure) |
 | 11 | Commit changes | `git add . && git commit -m "Add ChatKit"` |
 | 12 | Skip Vercel config | Already set to `main` |
-| 13 | Environment variables (Vercel) | Vercel → Settings → Environment Variables (add `OPENAI_API_KEY` and `WORKFLOW_ID`) |
+| **13** | **⚠️ Environment variables (VERCEL)** | **Vercel Dashboard → Settings → Environment Variables** |
 | 14 | Deploy to Vercel | `git push origin main` |
 | 15 | Test on Vercel | Visit your `.vercel.app/ask-agent` URL |
 | 16 | Done! | Already live |
@@ -1132,24 +1307,29 @@ Want the chat to appear as a floating button on every page? Here's how:
 | Step | What | Where |
 |------|------|-------|
 | 1 | Deploy to Vercel first (test without ChatKit) | [vercel.com](https://vercel.com) |
-| 2 | Add domain to OpenAI | OpenAI Platform → Settings → Security → Domain Allowlist |
+| 2 | Add production domain to OpenAI | OpenAI Platform → Settings → Security → Domain Allowlist |
 | 3 | Create `dev` branch | `git checkout -b dev && git push -u origin dev` |
 | 4 | Understand project structure | Review folder layout |
 | 5 | Install package | `npm install @openai/chatkit-react` |
-| 6 | Environment variables (local) | Create `.env.local` file with `OPENAI_API_KEY` and `WORKFLOW_ID` |
+| 6 | Environment variables (LOCAL) | Create `.env.local` file with `OPENAI_API_KEY` and `WORKFLOW_ID` |
 | 7 | Backend endpoint | Create `src/app/api/chatkit/session/route.ts` |
 | 8 | ChatKit script | Update `src/app/layout.tsx` |
 | 9 | Chat page | Update `src/app/ask-agent/page.tsx` |
 | 10 | Test locally | `npm run dev` (expect errors, check structure) |
 | 11 | Commit changes | `git add . && git commit -m "Add ChatKit"` |
 | 12 | Vercel config (optional) | Use auto-preview or change production branch |
-| 13 | Environment variables (Vercel) | Vercel → Settings → Environment Variables (add `OPENAI_API_KEY` and `WORKFLOW_ID`) |
-| 14 | Deploy to Vercel | `git push origin dev` |
-| 15 | Test on preview URL | Visit `your-project-git-dev-username.vercel.app/ask-agent` |
-| 16 | Merge to main | `git checkout main && git merge dev && git push` |
-| 17 | Verify production | Check `your-project.vercel.app` |
+| **13** | **⚠️ Environment variables (VERCEL)** | **Vercel Dashboard → Settings → Environment Variables (check Preview!)** |
+| 14 | Deploy to Vercel | `npx vercel login` (if not already logged in), then `npx vercel` (note the preview URL!) |
+| **15** | **⚠️ Add preview URL to OpenAI** | **OpenAI Platform → Domain Allowlist → Add preview URL** |
+| 16 | Test on preview URL | Visit `your-project-abc123.vercel.app/ask-agent` |
+| 17 | If issues, check console | F12 → Console → Look for error messages |
+| 18 | Merge to main | `git checkout main && git merge dev && git push` |
+| 19 | Verify production | Check `your-project.vercel.app` |
 
-**Important:** Make sure to add `WORKFLOW_ID` to your `.env.local` file and Vercel environment variables.
+> **⚠️ Key Points:**
+> - Step 6 (LOCAL) and Step 13 (VERCEL) are DIFFERENT! You need BOTH.
+> - Step 15: Each preview deployment URL must be added to OpenAI's allowlist
+> - When debugging, ALWAYS check the browser console (F12) first
 
 **Important Links:**
 - [Vercel Environments](https://vercel.com/docs/deployments/environments) - Learn about preview, production, and custom environments
@@ -1162,14 +1342,13 @@ Want the chat to appear as a floating button on every page? Here's how:
 
 ### Phase 1: Before Starting
 - [ ] Website deployed to Vercel (without ChatKit)
-- [ ] Vercel domain added to OpenAI's Domain Allowlist
+- [ ] Vercel **production domain** added to OpenAI's Domain Allowlist
 - [ ] Decided on deployment approach (direct to `main` or use `dev` branch)
 - [ ] If using dev branch: Created `dev` branch from `main`
-- [ ] If using dev branch: Added preview domain to OpenAI allowlist (or use `*.vercel.app`)
 
 ### Phase 2: Add ChatKit Code
 - [ ] Installed `@openai/chatkit-react` package
-- [ ] Created `.env.local` file with `OPENAI_API_KEY` and `WORKFLOW_ID`
+- [ ] Created `.env.local` file with `OPENAI_API_KEY` and `WORKFLOW_ID` (for local dev)
 - [ ] Created API route at `src/app/api/chatkit/session/route.ts`
 - [ ] Added ChatKit script to `src/app/layout.tsx`
 - [ ] Updated chat page at `src/app/ask-agent/page.tsx`
@@ -1179,11 +1358,14 @@ Want the chat to appear as a floating button on every page? Here's how:
 - [ ] Verified page structure looks correct
 - [ ] Committed changes to your working branch
 
-### Phase 4: Deploy & Test
-- [ ] Added `OPENAI_API_KEY` and `WORKFLOW_ID` to Vercel environment variables
-- [ ] Pushed changes to GitHub
-- [ ] Vercel deployed automatically
+### Phase 4: Deploy & Test (⚠️ Critical Steps!)
+- [ ] **⚠️ Added `OPENAI_API_KEY` to Vercel Dashboard** (Settings → Environment Variables)
+- [ ] **⚠️ Added `WORKFLOW_ID` to Vercel Dashboard** (Settings → Environment Variables)
+- [ ] **⚠️ Checked "Preview" environment** for both variables (not just Production!)
+- [ ] Deployed with `npx vercel` and noted the preview URL
+- [ ] **⚠️ Added preview URL to OpenAI's Domain Allowlist** (if testing on dev branch)
 - [ ] Tested ChatKit on deployed URL
+- [ ] If issues: Checked browser console (F12) for error messages
 - [ ] ChatKit working correctly
 
 ### Phase 5: Go Live (If Using Dev Branch)
@@ -1196,6 +1378,29 @@ Want the chat to appear as a floating button on every page? Here's how:
 - [ ] Configured custom domain for environment
 - [ ] Set up branch tracking
 - [ ] Configured environment-specific variables
+
+---
+
+## Quick Debugging Checklist
+
+**If ChatKit isn't working, check these in order:**
+
+1. **Browser Console (F12 → Console)**
+   - [ ] Look for "Domain verification failed" → Add domain to OpenAI allowlist
+   - [ ] Look for "WORKFLOW_ID is not set" → Add env vars to Vercel Dashboard
+   - [ ] Look for "OPENAI_API_KEY is not set" → Add env vars to Vercel Dashboard
+
+2. **Vercel Environment Variables**
+   - [ ] Is `OPENAI_API_KEY` set?
+   - [ ] Is `WORKFLOW_ID` set?
+   - [ ] Are both checked for "Preview" environment (not just Production)?
+
+3. **OpenAI Domain Allowlist**
+   - [ ] Is your production domain added?
+   - [ ] If testing preview: Is your specific preview URL added?
+
+4. **After Any Changes**
+   - [ ] Did you redeploy? (`npx vercel`)
 
 ---
 
