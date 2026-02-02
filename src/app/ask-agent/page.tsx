@@ -2,7 +2,7 @@
 
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function AskAgentPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -13,6 +13,9 @@ export default function AskAgentPage() {
     api: {
       async getClientSecret(existingSecret) {
         try {
+          console.info('[ChatKit] Requesting client secret', {
+            hasExistingSecret: Boolean(existingSecret),
+          });
           // If we already have a valid secret, try to refresh
           // Otherwise, get a new one
           const res = await fetch('/api/chatkit/session', {
@@ -27,6 +30,9 @@ export default function AskAgentPage() {
           });
 
           if (!res.ok) {
+            console.warn('[ChatKit] Session request failed', {
+              status: res.status,
+            });
             throw new Error('Failed to create session');
           }
 
@@ -38,6 +44,7 @@ export default function AskAgentPage() {
           }
 
           setIsLoading(false);
+          console.info('[ChatKit] Client secret received');
           return data.client_secret;
         } catch (err) {
           console.error('ChatKit session error:', err);
@@ -48,6 +55,17 @@ export default function AskAgentPage() {
       },
     },
   });
+
+  useEffect(() => {
+    if (!isLoading) return;
+    const timeoutId = window.setTimeout(() => {
+      console.warn('[ChatKit] Session initialization timed out');
+      setError('AI assistant is taking too long to respond. Please retry.');
+      setIsLoading(false);
+    }, 15000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isLoading]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDFCFA] to-[#F0F7F1]">
@@ -90,19 +108,22 @@ export default function AskAgentPage() {
         )}
 
         {/* ChatKit Container */}
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+        <div className="relative bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
           {/* Loading State */}
           {isLoading && (
-            <div className="h-[500px] md:h-[600px] flex items-center justify-center">
+            <div className="absolute inset-0 z-10 h-[500px] md:h-[600px] flex items-center justify-center bg-white">
               <div className="text-center">
                 <div className="w-12 h-12 border-4 border-[#2D5A3D] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-[#5A6B5C]">Connecting to AI Assistant...</p>
+                <p className="text-xs text-[#92A096] mt-2">
+                  This can take up to 15 seconds.
+                </p>
               </div>
             </div>
           )}
           
           {/* ChatKit Widget */}
-          {!isLoading && !error && (
+          {!error && (
             <ChatKit
               control={control}
               className="h-[500px] md:h-[600px] w-full"
