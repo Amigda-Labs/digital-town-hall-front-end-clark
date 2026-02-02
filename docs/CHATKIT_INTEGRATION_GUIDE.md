@@ -21,7 +21,7 @@ Before you start, make sure you have:
 - [ ] Your website code ready and working locally
 - [ ] A GitHub account with your project uploaded
 - [ ] An OpenAI account with API access
-- [ ] Your workflow ID from Agent Builder: `wf_691b576d09708190bb2a95e9568bce680b5b0785153c4a49`
+- [ ] Your workflow ID from Agent Builder (you'll add this to `.env.local`)
 - [ ] Your OpenAI API secret key (starts with `sk-...`)
 
 ---
@@ -47,7 +47,46 @@ Make sure your website code is on GitHub:
 5. Click **Create repository**
 6. Follow the instructions to push your existing code, or if you already have it on GitHub, you're good!
 
-### 1.2 Deploy to Vercel
+### 1.2 Deploy to Vercel Using CLI (Recommended)
+
+The easiest way to deploy is using the Vercel CLI. Open your terminal in your project folder and run:
+
+```bash
+# Step 1: Login to Vercel
+npx vercel login
+
+# Step 2: Deploy your project
+npx vercel
+```
+
+**What happens when you run `npx vercel`:**
+
+1. Vercel will ask: **"Set up and deploy your project?"** → Answer **yes**
+2. It will ask: **"Which scope should contain your project?"** → Select your account
+3. It will ask: **"Found project... Link to it?"** → Answer **yes** (if project exists) or let it create a new one
+4. It will ask: **"Would you like to pull environment variables now?"** → Answer **yes**
+   - This creates a `.env.local` file with your environment variables
+   - Vercel automatically adds `.env.local` to `.gitignore` (so secrets stay safe!)
+5. Vercel will build and deploy your site
+6. You'll get two URLs:
+   - **Preview URL:** `https://your-project-abc123.vercel.app` (this specific deployment)
+   - **Production URL:** `https://your-project.vercel.app` (your main domain)
+
+**Important URLs to save:**
+- **Production domain:** `your-project.vercel.app` ← You'll need this for OpenAI!
+- **Preview URL:** For testing this specific deployment
+
+**Example output:**
+```
+✅  Created .env.local file and added it to .gitignore [252ms]
+🔍  Inspect: https://vercel.com/your-username/your-project/abc123
+✅  Preview: https://your-project-abc123.vercel.app
+📝  To deploy to production (your-project.vercel.app), run `vercel --prod`
+```
+
+### 1.3 Alternative: Deploy via Vercel Dashboard
+
+If you prefer using the web interface:
 
 1. Go to [vercel.com](https://vercel.com) and sign up/log in (use your GitHub account for easy linking)
 2. Click **"Add New..."** → **"Project"**
@@ -56,7 +95,7 @@ Make sure your website code is on GitHub:
 5. Click **"Deploy"** - wait for it to finish (usually 1-2 minutes)
 6. Once deployed, Vercel gives you a URL like: `your-project-name.vercel.app`
 
-**Copy this URL** - you'll need it in the next step!
+**Copy your production domain** - you'll need it in the next step!
 
 ### 1.3 Test Your Deployed Website
 
@@ -72,29 +111,109 @@ Make sure your website code is on GitHub:
 
 ChatKit will ONLY work on domains that are whitelisted in OpenAI. This is a security feature.
 
-### 2.1 Go to OpenAI Platform Settings
+### 2.1 Understanding Your Domain
+
+From your Vercel deployment, you received:
+- **Production domain:** `your-project.vercel.app` ← Use this one for OpenAI!
+- **Preview/deployment URLs:** `your-project-abc123.vercel.app` ← Don't use these
+
+**Why?** The production domain stays the same, while preview URLs change with each deployment.
+
+### 2.2 Go to OpenAI Platform Settings
 
 1. Go to [platform.openai.com](https://platform.openai.com)
 2. Log in with your OpenAI account
 3. Click on **Settings** (gear icon, usually top right or in sidebar)
 4. Navigate to **Security** → **Domain Allowlist**
 
-### 2.2 Add Your Vercel Domain
+### 2.3 Add Your Vercel Domain
 
 1. Click **"Add Domain"**
-2. Enter your Vercel project domain: `your-project-name.vercel.app`
+2. Enter your Vercel **production domain**: `your-project.vercel.app`
    
    **IMPORTANT:** Use the PROJECT domain, NOT a specific deployment URL!
-   - Correct: `my-town-hall.vercel.app`
-   - Wrong: `my-town-hall-abc123xyz.vercel.app` (this is a deployment-specific URL)
+   - ✅ Correct: `digital-town-hall-front-end-clark.vercel.app`
+   - ❌ Wrong: `digital-town-hall-front-end-clark-fippi71pw.vercel.app` (deployment-specific)
    
 3. Click **Save** or **Add**
+4. **OpenAI will provide you with a domain verification key** - this is a security measure
 
-### 2.3 (Optional) Add localhost for local testing
+### 2.4 What is the Domain Verification Key?
+
+When you add a domain to OpenAI's allowlist, OpenAI may provide you with a **domain key** (verification token). This is used to prove you own the domain.
+
+**For Vercel domains (*.vercel.app):** You typically don't need to verify ownership since you're using Vercel's infrastructure. OpenAI trusts Vercel domains automatically.
+
+**For custom domains (like yourdomain.com):** You would need to add the verification key as a DNS TXT record.
+
+**Since you're using a Vercel domain, you can proceed to the next step!**
+
+### 2.5 (Optional) Add localhost for local testing
 
 If you want to test ChatKit locally before deploying:
 1. Also add `localhost` to the domain allowlist
 2. This lets you test on `http://localhost:3000`
+3. No verification needed for localhost
+
+### 2.6 What to Do with the Domain Key (If Provided)
+
+**If you received a domain key from OpenAI:**
+
+#### For Vercel Domains (*.vercel.app) - No Action Needed!
+
+If you're using your Vercel domain (like `your-project.vercel.app`), you typically **don't need to do anything** with the domain key. Vercel domains are automatically trusted by OpenAI.
+
+**You can skip to Step 3!**
+
+#### For Custom Domains (yourdomain.com) - DNS Verification Required
+
+If you're using a custom domain, you need to verify ownership by adding the key to your DNS records:
+
+1. **Copy the domain key** from OpenAI (it looks like: `openai-domain-verification=abc123xyz...`)
+2. Go to your domain registrar (GoDaddy, Namecheap, Cloudflare, etc.)
+3. Find **DNS Settings** or **DNS Management**
+4. Add a new **TXT record**:
+   - **Type:** TXT
+   - **Name:** `@` or your domain name
+   - **Value:** The verification key from OpenAI
+   - **TTL:** 3600 (or default)
+5. Save the record
+6. Wait 5-15 minutes for DNS propagation
+7. Return to OpenAI and click **"Verify Domain"**
+
+**Example DNS TXT Record:**
+```
+Type: TXT
+Name: @
+Value: openai-domain-verification=abc123xyz456def789
+TTL: 3600
+```
+
+#### Checking Verification Status
+
+1. Go back to OpenAI Platform → Settings → Security → Domain Allowlist
+2. Look for your domain - it should show as **"Verified"** with a green checkmark
+3. If not verified yet, wait a few more minutes and refresh
+
+---
+
+## Step 2.7: Your Deployment Summary
+
+**What you've accomplished so far:**
+
+✅ Logged into Vercel CLI with `npx vercel login`
+✅ Deployed your project with `npx vercel`
+✅ Received your production domain: `digital-town-hall-front-end-clark.vercel.app`
+✅ Vercel created `.env.local` file with environment variables
+✅ Vercel added `.env.local` to `.gitignore` automatically
+
+**Your Deployment URLs:**
+- **Production:** `https://digital-town-hall-front-end-clark.vercel.app`
+- **Preview:** `https://digital-town-hall-front-end-clark-fippi71pw.vercel.app`
+
+**Next Steps:**
+1. Add your production domain to OpenAI's allowlist (Step 2.3)
+2. Continue with ChatKit integration (Step 3 onwards)
 
 ---
 
@@ -268,9 +387,14 @@ Never put API keys directly in your code! Instead, we use environment variables.
 ```env
 # Your OpenAI API Key - KEEP THIS SECRET!
 OPENAI_API_KEY=sk-your-actual-api-key-here
+
+# Your workflow ID from OpenAI Agent Builder
+WORKFLOW_ID=wf-your-workflow-id-here
 ```
 
-**Replace `sk-your-actual-api-key-here` with your actual OpenAI API key.**
+**Replace the values with your actual credentials:**
+- `sk-your-actual-api-key-here` → Your OpenAI API key
+- `wf-your-workflow-id-here` → Your workflow ID from Agent Builder
 
 ### 6.2 Make Sure It's Ignored by Git
 
@@ -311,11 +435,17 @@ src/
 ```typescript
 import { NextResponse } from 'next/server';
 
-// Your workflow ID from OpenAI Agent Builder
-const WORKFLOW_ID = 'wf_691b576d09708190bb2a95e9568bce680b5b0785153c4a49';
-
 export async function POST(request: Request) {
   try {
+    // Validate environment variable
+    const WORKFLOW_ID = process.env.WORKFLOW_ID;
+    if (!WORKFLOW_ID) {
+      return NextResponse.json(
+        { error: 'WORKFLOW_ID environment variable is not set' },
+        { status: 500 }
+      );
+    }
+
     // Get the user's device ID (optional - for tracking conversations)
     const body = await request.json().catch(() => ({}));
     const deviceId = body.deviceId || `user_${Date.now()}`;
@@ -359,10 +489,11 @@ export async function POST(request: Request) {
 ```
 
 **What this code does:**
-1. Receives a request from your frontend
-2. Calls OpenAI's API to create a ChatKit session
-3. Uses your workflow ID to connect to your AI agent
-4. Returns a `client_secret` that the frontend needs to start chatting
+1. Validates that the WORKFLOW_ID environment variable is set
+2. Receives a request from your frontend
+3. Calls OpenAI's API to create a ChatKit session
+4. Uses your workflow ID from environment variables to connect to your AI agent
+5. Returns a `client_secret` that the frontend needs to start chatting
 
 ---
 
@@ -742,12 +873,26 @@ Your local `.env.local` file won't work on Vercel - you need to add the secret t
 1. Still in your project on Vercel
 2. Go to **Settings** → **Environment Variables** (in the left sidebar)
 
-### 13.2 Add the API Key
+### 13.2 Add the Environment Variables
 
+You need to add both your API key and workflow ID:
+
+**First, add your API Key:**
 1. Click **"Add New"**
 2. Enter:
    - **Key:** `OPENAI_API_KEY`
    - **Value:** `sk-your-actual-api-key-here` (your real API key)
+3. Select which environments it applies to:
+   - ✅ Check **Production**
+   - ✅ Check **Preview**
+   - ✅ Check **Development**
+4. Click **Save**
+
+**Then, add your Workflow ID:**
+1. Click **"Add New"** again
+2. Enter:
+   - **Key:** `WORKFLOW_ID`
+   - **Value:** `wf-your-workflow-id-here` (your workflow ID from Agent Builder)
 3. Select which environments it applies to:
    - ✅ Check **Production**
    - ✅ Check **Preview**
@@ -882,7 +1027,8 @@ Vercel should automatically redeploy from `main`. To verify:
 **Check these things:**
 1. Is your domain added to OpenAI's Domain Allowlist?
 2. Is your API key correct in Vercel's environment variables?
-3. Is your workflow ID correct in `route.ts`?
+3. Is your `WORKFLOW_ID` environment variable set correctly in Vercel?
+4. Are both `OPENAI_API_KEY` and `WORKFLOW_ID` added to your `.env.local` file locally?
 
 ### ChatKit not loading
 
@@ -969,14 +1115,14 @@ Want the chat to appear as a floating button on every page? Here's how:
 | 3 | Skip branch creation | Work directly on `main` |
 | 4 | Understand project structure | Review folder layout |
 | 5 | Install package | `npm install @openai/chatkit-react` |
-| 6 | API Key (local) | Create `.env.local` file |
+| 6 | Environment variables (local) | Create `.env.local` file with `OPENAI_API_KEY` and `WORKFLOW_ID` |
 | 7 | Backend endpoint | Create `src/app/api/chatkit/session/route.ts` |
 | 8 | ChatKit script | Update `src/app/layout.tsx` |
 | 9 | Chat page | Update `src/app/ask-agent/page.tsx` |
 | 10 | Test locally | `npm run dev` (expect errors, check structure) |
 | 11 | Commit changes | `git add . && git commit -m "Add ChatKit"` |
 | 12 | Skip Vercel config | Already set to `main` |
-| 13 | API Key (Vercel) | Vercel → Settings → Environment Variables |
+| 13 | Environment variables (Vercel) | Vercel → Settings → Environment Variables (add `OPENAI_API_KEY` and `WORKFLOW_ID`) |
 | 14 | Deploy to Vercel | `git push origin main` |
 | 15 | Test on Vercel | Visit your `.vercel.app/ask-agent` URL |
 | 16 | Done! | Already live |
@@ -990,20 +1136,20 @@ Want the chat to appear as a floating button on every page? Here's how:
 | 3 | Create `dev` branch | `git checkout -b dev && git push -u origin dev` |
 | 4 | Understand project structure | Review folder layout |
 | 5 | Install package | `npm install @openai/chatkit-react` |
-| 6 | API Key (local) | Create `.env.local` file |
+| 6 | Environment variables (local) | Create `.env.local` file with `OPENAI_API_KEY` and `WORKFLOW_ID` |
 | 7 | Backend endpoint | Create `src/app/api/chatkit/session/route.ts` |
 | 8 | ChatKit script | Update `src/app/layout.tsx` |
 | 9 | Chat page | Update `src/app/ask-agent/page.tsx` |
 | 10 | Test locally | `npm run dev` (expect errors, check structure) |
 | 11 | Commit changes | `git add . && git commit -m "Add ChatKit"` |
 | 12 | Vercel config (optional) | Use auto-preview or change production branch |
-| 13 | API Key (Vercel) | Vercel → Settings → Environment Variables |
+| 13 | Environment variables (Vercel) | Vercel → Settings → Environment Variables (add `OPENAI_API_KEY` and `WORKFLOW_ID`) |
 | 14 | Deploy to Vercel | `git push origin dev` |
 | 15 | Test on preview URL | Visit `your-project-git-dev-username.vercel.app/ask-agent` |
 | 16 | Merge to main | `git checkout main && git merge dev && git push` |
 | 17 | Verify production | Check `your-project.vercel.app` |
 
-**Workflow ID:** `wf_691b576d09708190bb2a95e9568bce680b5b0785153c4a49`
+**Important:** Make sure to add `WORKFLOW_ID` to your `.env.local` file and Vercel environment variables.
 
 **Important Links:**
 - [Vercel Environments](https://vercel.com/docs/deployments/environments) - Learn about preview, production, and custom environments
@@ -1023,7 +1169,7 @@ Want the chat to appear as a floating button on every page? Here's how:
 
 ### Phase 2: Add ChatKit Code
 - [ ] Installed `@openai/chatkit-react` package
-- [ ] Created `.env.local` file with `OPENAI_API_KEY`
+- [ ] Created `.env.local` file with `OPENAI_API_KEY` and `WORKFLOW_ID`
 - [ ] Created API route at `src/app/api/chatkit/session/route.ts`
 - [ ] Added ChatKit script to `src/app/layout.tsx`
 - [ ] Updated chat page at `src/app/ask-agent/page.tsx`
@@ -1034,7 +1180,7 @@ Want the chat to appear as a floating button on every page? Here's how:
 - [ ] Committed changes to your working branch
 
 ### Phase 4: Deploy & Test
-- [ ] Added `OPENAI_API_KEY` to Vercel environment variables
+- [ ] Added `OPENAI_API_KEY` and `WORKFLOW_ID` to Vercel environment variables
 - [ ] Pushed changes to GitHub
 - [ ] Vercel deployed automatically
 - [ ] Tested ChatKit on deployed URL

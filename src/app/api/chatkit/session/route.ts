@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 
-// Your workflow ID from OpenAI Agent Builder
-const WORKFLOW_ID = 'wf_691b576d09708190bb2a95e9568bce680b5b0785153c4a49';
-
 export async function POST(request: Request) {
   try {
+    // Validate environment variable
+    const WORKFLOW_ID = process.env.WORKFLOW_ID;
+    if (!WORKFLOW_ID) {
+      return NextResponse.json(
+        { error: 'WORKFLOW_ID environment variable is not set' },
+        { status: 500 }
+      );
+    }
+
     // Get the user's device ID (optional - for tracking conversations)
     const body = await request.json().catch(() => ({}));
     const deviceId = body.deviceId || `user_${Date.now()}`;
