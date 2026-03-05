@@ -2,70 +2,17 @@
 
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+
+const CHATKIT_DOMAIN_KEY =
+  process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY ?? "domain_pk_localhost_dev";
 
 export default function AskAgentPage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Initialize ChatKit with your backend
   const { control } = useChatKit({
     api: {
-      async getClientSecret(existingSecret) {
-        try {
-          console.info('[ChatKit] Requesting client secret', {
-            hasExistingSecret: Boolean(existingSecret),
-          });
-          // If we already have a valid secret, try to refresh
-          // Otherwise, get a new one
-          const res = await fetch('/api/chatkit/session', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              // You can add a deviceId here for user tracking
-              deviceId: localStorage.getItem('chatkit_device_id') || undefined,
-            }),
-          });
-
-          if (!res.ok) {
-            console.warn('[ChatKit] Session request failed', {
-              status: res.status,
-            });
-            throw new Error('Failed to create session');
-          }
-
-          const data = await res.json();
-          
-          // Store device ID for future sessions
-          if (!localStorage.getItem('chatkit_device_id')) {
-            localStorage.setItem('chatkit_device_id', `user_${Date.now()}`);
-          }
-
-          setIsLoading(false);
-          console.info('[ChatKit] Client secret received');
-          return data.client_secret;
-        } catch (err) {
-          console.error('ChatKit session error:', err);
-          setError('Unable to connect to AI assistant. Please try again later.');
-          setIsLoading(false);
-          throw err;
-        }
-      },
+      url: "/chatkit",
+      domainKey: CHATKIT_DOMAIN_KEY,
     },
   });
-
-  useEffect(() => {
-    if (!isLoading) return;
-    const timeoutId = window.setTimeout(() => {
-      console.warn('[ChatKit] Session initialization timed out');
-      setError('AI assistant is taking too long to respond. Please retry.');
-      setIsLoading(false);
-    }, 15000);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [isLoading]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDFCFA] to-[#F0F7F1]">
@@ -94,41 +41,12 @@ export default function AskAgentPage() {
 
       {/* Chat Interface */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Error State */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3">
-            <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <p className="font-semibold text-red-800">Connection Error</p>
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          </div>
-        )}
-
         {/* ChatKit Container */}
         <div className="relative bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
-          {/* Loading State */}
-          {isLoading && (
-            <div className="absolute inset-0 z-10 h-[500px] md:h-[600px] flex items-center justify-center bg-white">
-              <div className="text-center">
-                <div className="w-12 h-12 border-4 border-[#2D5A3D] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-[#5A6B5C]">Connecting to AI Assistant...</p>
-                <p className="text-xs text-[#92A096] mt-2">
-                  This can take up to 15 seconds.
-                </p>
-              </div>
-            </div>
-          )}
-          
-          {/* ChatKit Widget */}
-          {!error && (
-            <ChatKit
-              control={control}
-              className="h-[500px] md:h-[600px] w-full"
-            />
-          )}
+          <ChatKit
+            control={control}
+            className="h-[500px] md:h-[600px] w-full"
+          />
         </div>
 
         {/* Features */}

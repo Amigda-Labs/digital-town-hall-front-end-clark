@@ -10,11 +10,22 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Disable network interface detection to avoid sandbox errors
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',
     },
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/chatkit",
+        destination: "http://127.0.0.1:8000/chatkit",
+      },
+      {
+        source: "/chatkit/:path*",
+        destination: "http://127.0.0.1:8000/chatkit/:path*",
+      },
+    ];
   },
 };
 
