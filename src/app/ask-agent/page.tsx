@@ -2,15 +2,43 @@
 
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
 
 const CHATKIT_DOMAIN_KEY =
   process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY ?? "domain_pk_localhost_dev";
 
+function getOrCreateDeviceId(): string {
+  const STORAGE_KEY = 'chatkit:device-id';
+  let id = localStorage.getItem(STORAGE_KEY);
+  if (!id) {
+    id =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(STORAGE_KEY, id);
+  }
+  return id;
+}
+
 export default function AskAgentPage() {
+  const deviceIdRef = useRef<string>('');
+
+  useEffect(() => {
+    deviceIdRef.current = getOrCreateDeviceId();
+  }, []);
+
   const { control } = useChatKit({
     api: {
       url: "/chatkit",
       domainKey: CHATKIT_DOMAIN_KEY,
+      fetch: (input, init) =>
+        fetch(input, {
+          ...init,
+          headers: {
+            ...init?.headers,
+            'X-Device-ID': deviceIdRef.current,
+          },
+        }),
     },
   });
 
